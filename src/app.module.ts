@@ -11,6 +11,7 @@ import { TrainersModule } from './trainers/trainers.module';
 import { PokemonModule } from './pokemon/pokemon.module';
 import { CardsModule } from './cards/cards.module';
 import { AchievementsModule } from './achievements/achievements.module';
+import { ScanModule } from './scan/scan.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AchievementsModule } from './achievements/achievements.module';
     PokemonModule,
     CardsModule,
     AchievementsModule,
+    ScanModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

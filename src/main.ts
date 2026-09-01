@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
+import { json } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -8,6 +9,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
+  // Default de Nest/Express es 100kb — una foto de carta en base64 lo pasa
+  // largo (POST /scan/card, ver src/scan/).
+  app.use(json({ limit: '10mb' }));
   // La app RN vive en la misma red local que el backend (tablet ↔ máquina de
   // desarrollo/servidor casero); esto solo restringe clientes web.
   app.enableCors({
