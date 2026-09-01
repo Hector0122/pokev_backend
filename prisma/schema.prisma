@@ -1,0 +1,144 @@
+// Prisma schema para PokeV
+// Modelo de datos según Nuestra_Coleccion_Pokemon.md (raíz del proyecto)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  // El proyecto es CommonJS (sin "type": "module" en package.json); sin esto
+  // Prisma detecta mal el formato por el "module: nodenext" del tsconfig y
+  // genera código ESM (import.meta.url) que rompe en runtime.
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Los dos usuarios fijos de la app (§18 Personalización) — no es un sistema
+// de auth multiusuario genérico, son "Entrenador 1" (papá) y "Entrenador 2"
+// (hijo), usados en favoritos, logros y recuerdos.
+enum TrainerRole {
+  DAD
+  KID
+}
+
+model Trainer {
+  id                String   @id @default(uuid()) @db.Uuid
+  role              TrainerRole @unique
+  name              String
+  avatarUrl         String?     @map("avatar_url")
+  favoritePokemonId Int?        @map("favorite_pokemon_id")
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  favoritePokemon    Pokemon?            @relation(fields: [favoritePokemonId], references: [id])
+  cardFavorites      CardFavorite[]
+  acquiredCards      Card[]              @relation("AcquiredBy")
+  unlockedAchievements TrainerAchievement[]
+
+  @@map("trainers")
+}
+
+// Catálogo de Pokémon — no representa la Pokédex completa, solo los que
+// aparecen referenciados por al menos una carta de la colección (§9, §10).
+// Info básica cacheable desde PokeAPI; se guarda localmente para que la
+// app funcione offline y en un lenguaje simple para un niño de 6 años.
+model Pokemon {
+  id              Int      @id // national dex number
+  name            String
+  primaryType     String   @map("primary_type")
+  secondaryType   String?  @map("secondary_type")
+  region          String?
+  heightCm        Int?     @map("height_cm")
+  weightHg        Int?     @map("weight_hg")
+  spriteUrl       String?  @map("sprite_url")
+  description     String? // descripción sencilla, apta para 6 años
+  evolvesFromId   Int?     @map("evolves_from_id")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  evolvesFrom     Pokemon?  @relation("Evolution", fields: [evolvesFromId], references: [id])
+  evolvesTo       Pokemon[] @relation("Evolution")
+  cards           Card[]
+  favoritedBy     Trainer[]
+
+  @@map("pokemon")
+}
+
+// Una carta física que papá e hijo realmente poseen. "Mi colección" (§5) es
+// exclusivamente esta tabla — nunca una lista de cartas que no tienen.
+model Card {
+  id             String   @id @default(uuid()) @db.Uuid
+  pokemonId      Int      @map("pokemon_id")
+  setName        String   @map("set_name") // expansión, p.ej. "Scarlet & Violet"
+  cardNumber     String   @map("card_number")
+  rarity         String?
+  cardType       String?  @map("card_type") // p.ej. "ex", "V", "Illustration Rare"
+  hp             Int?
+  attacks        Json? // [{ name, damage, description }]
+  year           Int?
+  language       String?
+  variant        String?
+  imageUrl       String?  @map("image_url")
+
+  // Información de colección (§8)
+  quantity       Int      @default(1)
+  estimatedValueUsd Decimal? @map("estimated_value_usd") @db.Decimal(10, 2)
+  acquiredAt     DateTime? @map("acquired_at") @db.Timestamptz(6)
+  acquiredWithId String?   @map("acquired_with_id") @db.Uuid // quién la consiguió (Trainer)
+  memory         String? // recuerdo asociado (§14)
+  isFirstCard    Boolean  @default(false) @map("is_first_card") // 🎁 primera carta de la colección
+
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  pokemon        Pokemon        @relation(fields: [pokemonId], references: [id])
+  acquiredWith   Trainer?       @relation("AcquiredBy", fields: [acquiredWithId], references: [id])
+  favoritedBy    CardFavorite[]
+
+  @@index([pokemonId])
+  @@map("cards")
+}
+
+// Favorita de quién (§3.3, §11) — una carta puede ser favorita de papá, del
+// hijo, o de ambos a la vez; independiente entre sí y del valor económico.
+model CardFavorite {
+  cardId    String  @map("card_id") @db.Uuid
+  trainerId String  @map("trainer_id") @db.Uuid
+
+  card    Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  trainer Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, trainerId])
+  @@map("card_favorites")
+}
+
+// Catálogo de logros (§15) — hitos que se celebran, nunca lo que falta.
+model Achievement {
+  key         String   @id // p.ej. "collector-100-cards"
+  category    String // "Coleccionista" | "Explorador" | "Nuestra colección"
+  title       String
+  icon        String? // emoji o nombre de icono
+  threshold   Int? // p.ej. 100 para "100 cartas" — null si no es numérico
+
+  unlockedBy TrainerAchievement[]
+
+  @@map("achievements")
+}
+
+// trainerId nulo = logro familiar/compartido (la mayoría: "100 cartas",
+// "10 Pokémon descubiertos"...). No nulo = logro personal de un entrenador
+// ("primera carta favorita de mi hijo", "primera carta de papá", §15).
+// La unicidad (trainer, achievement) se valida en AchievementsService, no a
+// nivel de DB: Postgres trata cada NULL como distinto en un unique index, así
+// que una constraint ahí no evitaría duplicados para los logros familiares.
+model TrainerAchievement {
+  id             String   @id @default(uuid()) @db.Uuid
+  trainerId      String?  @map("trainer_id") @db.Uuid
+  achievementKey String   @map("achievement_key")
+  unlockedAt     DateTime @default(now()) @map("unlocked_at") @db.Timestamptz(6)
+
+  trainer     Trainer?    @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementKey], references: [key], onDelete: Cascade)
+
+  @@index([trainerId, achievementKey])
+  @@map("trainer_achievements")
+}
