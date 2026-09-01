@@ -11,12 +11,12 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   await prisma.trainer.upsert({
     where: { role: 'DAD' },
-    create: { role: 'DAD', name: 'Papá' },
+    create: { role: 'DAD', name: 'Héctor' },
     update: {},
   });
   await prisma.trainer.upsert({
     where: { role: 'KID' },
-    create: { role: 'KID', name: 'Mi hijo' },
+    create: { role: 'KID', name: 'Dante' },
     update: {},
   });
 
