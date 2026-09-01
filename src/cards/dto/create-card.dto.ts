@@ -8,8 +8,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   IsUUID,
+  Matches,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -59,8 +59,13 @@ export class CreateCardDto {
   @IsString()
   variant?: string;
 
+  // URL http(s) normal (TCGdex, PokeAPI) o `data:image/...;base64,...` — la
+  // foto que saca la cámara al escanear (ver AddCardFab) se guarda tal cual,
+  // sin subirla a ningún lado.
   @IsOptional()
-  @IsUrl()
+  @Matches(/^(https?:\/\/|data:image\/)/, {
+    message: 'imageUrl debe ser una URL http(s) o una imagen data:image',
+  })
   imageUrl?: string;
 
   @IsOptional()
