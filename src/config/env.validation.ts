@@ -16,4 +16,14 @@ export const envValidationSchema = Joi.object({
   // boot del resto de la API, que no depende de esto para nada.
   GROQ_API_KEY: Joi.string().optional(),
   GROQ_VISION_MODEL: Joi.string().default('qwen/qwen3.6-27b'),
+  // Storage de fotos de cartas (V0.7 — Cloudflare R2, API S3-compatible).
+  // Opcional a propósito, mismo motivo que GROQ_API_KEY arriba: sin esto,
+  // POST /uploads/card-image responde con un error amigable y el resto de
+  // la API (incluido guardar la carta con la foto inline como antes) sigue
+  // funcionando igual.
+  R2_ACCOUNT_ID: Joi.string().optional(),
+  R2_ACCESS_KEY_ID: Joi.string().optional(),
+  R2_SECRET_ACCESS_KEY: Joi.string().optional(),
+  R2_BUCKET_NAME: Joi.string().default('pokev'),
+  R2_PUBLIC_URL: Joi.string().optional(),
 });
