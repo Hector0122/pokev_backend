@@ -1,98 +1,39 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# PokeV 🃏 — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API para PokeV, una app familiar para llevar la colección física de cartas Pokémon de un papá y su hijo de 6 años. Capturas y descripción completa: **[pokev_frontend](https://github.com/Hector0122/pokev_frontend)**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+| | |
+|---|---|
+| Framework | NestJS 11 |
+| ORM / DB | Prisma 7 (driver-adapter) + PostgreSQL |
+| Auth | JWT (access + refresh) + API key familiar compartida |
+| Storage | Cloudflare R2 (S3-compatible) — fotos de cartas escaneadas |
+| IA | Groq Vision — lectura de cartas por foto |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Desplegado en Railway.
 
-## Project setup
+## Arquitectura
 
-```bash
-$ npm install
-```
+- **Trainers** — los dos entrenadores (papá / hijo) son fijos, sin alta/baja de usuarios
+- **Cards** — colección real que poseen: CRUD, cantidad, favoritas
+- **Pokemon** — "Nuestros Pokémon": solo los descubiertos por tener al menos una carta propia
+- **Achievements** — catálogo de logros por hitos de colección
+- **Scan** — reconocimiento de cartas por foto (Groq Vision)
+- **Uploads** — subida de fotos de cartas a R2
 
-## Compile and run the project
+## Cómo está resuelto
 
-```bash
-# development
-$ npm run start
+- **"Nuestros Pokémon" nunca expone el catálogo completo de Pokémon** — todo query de `PokemonService` filtra por `cards: { some: {} } }`, nunca lista lo que todavía no han descubierto.
+- El **escaneo separa responsabilidades**: el backend solo "lee" la foto con un modelo de visión (Groq) y devuelve nombre/set/número; el cliente hace el match real contra el catálogo de TCGdex, así el backend no duplica esa base de datos.
+- El **enriquecimiento de un Pokémon** (altura, peso, evoluciones, descripción) llega resuelto desde el cliente, que consulta PokeAPI — el backend solo completa columnas en null, nunca pisa un dato ya guardado.
+- El acceso está protegido por una **API key familiar fija** (header `x-app-key`) además de JWT — pensado para dos usuarios fijos, no para registro público.
 
-# watch mode
-$ npm run start:dev
+## Aviso legal
 
-# production mode
-$ npm run start:prod
-```
+Proyecto personal, sin fines comerciales, para uso exclusivo de mi hijo y yo — no está afiliado, respaldado ni asociado con Nintendo, Game Freak, Creatures Inc. ni The Pokémon Company. "Pokémon" y los nombres/imágenes de las cartas son marcas y derechos de autor de sus respectivos dueños. Los datos se consultan en vivo desde [PokeAPI](https://pokeapi.co/) y [TCGdex](https://tcgdex.dev/); este repositorio no redistribuye assets propios de esas fuentes.
 
-## Run tests
+## Licencia
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT (código propio) — ver [LICENSE](LICENSE). No cubre marcas ni contenido de Pokémon.
