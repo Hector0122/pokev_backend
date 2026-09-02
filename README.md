@@ -1,4 +1,6 @@
-# PokeV 🃏 — Backend
+<p align="center"><img src=".github/logo/pokev-icon.png" width="72" alt="PokeV" /></p>
+
+# PokeV — Backend
 
 API para PokeV, una app familiar para llevar la colección física de cartas Pokémon de un papá y su hijo de 6 años. Capturas y descripción completa: **[pokev_frontend](https://github.com/Hector0122/pokev_frontend)**.
 
