@@ -13,6 +13,7 @@ import { CardsModule } from './cards/cards.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { ScanModule } from './scan/scan.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ApiKeyGuard } from './common/guards/api-key.guard';
 
 @Module({
   imports: [
@@ -31,6 +32,10 @@ import { UploadsModule } from './uploads/uploads.module';
     UploadsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: ApiKeyGuard },
+  ],
 })
 export class AppModule {}

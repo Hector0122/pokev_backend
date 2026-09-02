@@ -11,6 +11,14 @@ export const envValidationSchema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().min(16).required(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('30d'),
   CORS_ORIGIN: Joi.string().allow('').optional(),
+  // Key compartida que pokev_frontend manda en el header `x-app-key` en
+  // cada request (ver ApiKeyGuard) — no es login por persona, es lo único
+  // que evita que cualquiera que encuentre la URL de Railway (está
+  // comiteada en texto plano en pokev_frontend/src/config.ts, el repo es
+  // público) pueda leer/crear/borrar cartas. Requerida a propósito: sin
+  // esto el guard rechaza todo el tráfico igual, mejor que el boot falle
+  // con un mensaje claro a que arranque silenciosamente inútil.
+  APP_API_KEY: Joi.string().min(16).required(),
   // Escaneo de cartas (V0.6 adelantado) — opcional a propósito: sin la key,
   // POST /scan/card responde con un error amigable en vez de tirar abajo el
   // boot del resto de la API, que no depende de esto para nada.
