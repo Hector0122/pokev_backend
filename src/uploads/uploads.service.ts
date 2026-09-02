@@ -5,7 +5,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { UploadImageDto } from './dto/upload-image.dto';
 
@@ -92,5 +96,34 @@ export class UploadsService {
     }
 
     return { url: `${publicUrl.replace(/\/+$/, '')}/${key}` };
+  }
+
+  /**
+   * Borra la foto de R2 cuando ya nadie la necesita — al borrar una carta,
+   * o al reemplazar su foto por otra. Nunca al vencer una edad fija (eso
+   * borraría fotos de cartas vigentes): solo cuando de verdad sabemos que
+   * dejó de estar en uso. Best-effort: si falla (R2 no configurado, red,
+   * la key ya no existe), solo lo loguea — nunca bloquea borrar/actualizar
+   * la carta en sí.
+   */
+  async deleteCardImageIfOwned(url: string | null | undefined): Promise<void> {
+    if (!url) return;
+    const publicUrl = this.configService.get<string>('R2_PUBLIC_URL');
+    const bucket = this.configService.get<string>('R2_BUCKET_NAME') ?? 'pokev';
+    if (!publicUrl) return; // R2 no configurado — nada que limpiar (la foto vivía inline como data:).
+
+    const prefix = `${publicUrl.replace(/\/+$/, '')}/`;
+    if (!url.startsWith(prefix)) return; // no es nuestra (TCGdex, u otra), no la tocamos.
+    const key = url.slice(prefix.length);
+
+    try {
+      await this.getClient().send(
+        new DeleteObjectCommand({ Bucket: bucket, Key: key }),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo borrar ${key} de R2: ${(error as Error).message}`,
+      );
+    }
   }
 }

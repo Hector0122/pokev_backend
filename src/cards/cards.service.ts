@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, TrainerRole } from '../../generated/prisma/client';
 import { AchievementsService } from '../achievements/achievements.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { CreateCardDto } from './dto/create-card.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 
@@ -10,6 +11,7 @@ export class CardsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly achievementsService: AchievementsService,
+    private readonly uploadsService: UploadsService,
   ) {}
 
   /** "Mi colección" (§5) — exclusivamente cartas que realmente poseen. */
@@ -97,8 +99,8 @@ export class CardsService {
   }
 
   async update(id: string, dto: UpdateCardDto) {
-    await this.findOne(id);
-    return this.prisma.card.update({
+    const previous = await this.findOne(id);
+    const updated = await this.prisma.card.update({
       where: { id },
       data: {
         setName: dto.setName,
@@ -119,11 +121,21 @@ export class CardsService {
       },
       include: { pokemon: true, favoritedBy: { include: { trainer: true } } },
     });
+
+    // Reemplazó la foto por otra (o la quitó) — la vieja en R2 ya no la usa
+    // nadie más, se borra. `dto.imageUrl === undefined` significa "no vino
+    // en el body", no "la borró" — ahí no se toca la foto existente.
+    if (dto.imageUrl !== undefined && dto.imageUrl !== previous.imageUrl) {
+      await this.uploadsService.deleteCardImageIfOwned(previous.imageUrl);
+    }
+
+    return updated;
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const card = await this.findOne(id);
     await this.prisma.card.delete({ where: { id } });
+    await this.uploadsService.deleteCardImageIfOwned(card.imageUrl);
   }
 
   async setFavorite(id: string, role: TrainerRole, isFavorite: boolean) {
